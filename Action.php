@@ -245,6 +245,7 @@ class Restful_Action extends Typecho_Widget implements Widget_Interface_Do
         $filterType = trim($this->getParams('filterType', ''));
         $filterSlug = trim($this->getParams('filterSlug', ''));
         $showContent = trim($this->getParams('showContent', '')) === 'true';
+        $showDigest = trim($this->getParams('showDigest', ''));
 
         if (in_array($filterType, array('category', 'tag', 'search'))) {
             if ($filterSlug == '') {
@@ -305,10 +306,33 @@ class Restful_Action extends Typecho_Widget implements Widget_Interface_Do
             ->limit($pageSize);
         $result = $this->db->fetchAll($select);
         foreach ($result as $key => $value) {
+            // digest has two types
+            if ($showDigest === 'more') {
+                // if you use 'more', plugin will truncate from <!--more-->
+                $result[$key]['digest'] = str_replace(
+                    "<!--markdown-->", "",
+                    explode("<!--more-->", $result[$key]['text'])[0]
+                );
+
+                $result[$key] = $this->filter($result[$key]);
+            } else if ($showDigest === 'excerpt') {
+                // if you use 'excerpt', plugin will truncate for certain number of text
+                $limit = (int) trim($this->getParams('limit', '200'));
+                $result[$key] = $this->filter($result[$key]);
+                $result[$key]['digest'] = mb_substr(
+                    htmlspecialchars_decode(strip_tags($result[$key]['text'])),
+                    0,
+                    $limit,
+                    'utf-8'
+                ) . "...";
+            } else {
+                $result[$key] = $this->filter($result[$key]);
+            }
+
+
             if (!$showContent) {
                 unset($result[$key]['text']);
             }
-            $result[$key] = $this->filter($result[$key]);
         }
 
         $this->throwData(array(
@@ -731,6 +755,7 @@ class Restful_Action extends Typecho_Widget implements Widget_Interface_Do
         $this->checkState('archives');
         $showContent = trim($this->getParams('showContent', '')) === 'true';
         $order = strtolower($this->getParams('order', 'desc'));
+        $showDigest = trim($this->getParams('showDigest', ''));
 
         $select = $this->db->select('cid', 'title', 'slug', 'created', 'modified', 'type', 'text')
             ->from('table.contents')
@@ -743,7 +768,29 @@ class Restful_Action extends Typecho_Widget implements Widget_Interface_Do
         $archives = array();
         $created = array();
         foreach ($posts as $key => $post) {
-            $post = $this->filter($post);
+            // digest related
+            if ($showDigest === 'more') {
+                $post['digest'] = str_replace(
+                    "<!--markdown-->", "",
+                    explode("<!--more-->", $post['text'])[0]
+                );
+
+                $post = $this->filter($post);
+            }
+            else if ($showDigest === 'excerpt') {
+                $limit = (int) trim($this->getParams('limit', '200'));
+                $post = $this->filter($post);
+                $post['digest'] = mb_substr(
+                    htmlspecialchars_decode(strip_tags($post['text'])),
+                    0,
+                    $limit,
+                    'utf-8'
+                ) . "...";
+            }
+            else {
+                $post = $this->filter($post);
+            }
+
             if (!$showContent) {
                 unset($post['text']);
             }
@@ -890,21 +937,29 @@ class Restful_Action extends Typecho_Widget implements Widget_Interface_Do
     {
         $contentWidget = $this->widget('Widget_Abstract_Contents');
         $value['text'] = isset($value['text']) ? $value['text'] : null;
+        $value['digest'] = isset($value['digest']) ? $value['digest'] : null;
 
         if (method_exists($contentWidget, 'markdown')) {
             $value = $contentWidget->filter($value);
             $value['text'] = $contentWidget->markdown($value['text']);
+            $value['digest'] = $contentWidget->markdown($value['digest']);
         } else {
             // Typecho 0.9 compatibility
             $value['type'] = isset($value['type']) ? $value['type'] : null;
             $value = $contentWidget->filter($value);
             $value['text'] = MarkdownExtraExtended::defaultTransform($value['text']);
+            $value['digest'] = MarkdownExtraExtended::defaultTransform($value['digest']);
+
             if ($value['type'] === null) {
                 unset($value['type']);
             }
-            if (empty(trim($value['text']))) {
-                unset($value['text']);
-            }
+        }
+
+        if (empty(trim($value['text']))) {
+            unset($value['text']);
+        }
+        if (empty(trim($value['digest']))) {
+            unset($value['digest']);
         }
         // Custom fields
         $value['fields'] = $this->getCustomFields($value['cid']);
