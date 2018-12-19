@@ -36,8 +36,8 @@ class RestfulTest extends TestCase
     {
         $response = self::$client->get('/api/posts');
         $result = json_decode($response->getBody(), true);
-        echo $response->getBody();
-        //$this->assertEquals('success', $result['status']);
+
+        $this->assertEquals('success', $result['status']);
         $this->assertArrayHasKey('page', $result['data']);
         $this->assertArrayHasKey('pages', $result['data']);
         $this->assertArrayHasKey('count', $result['data']);
@@ -49,8 +49,8 @@ class RestfulTest extends TestCase
     {
         $response = self::$client->get('/api/pages');
         $result = json_decode($response->getBody(), true);
-        echo $response->getBody();
-        //$this->assertEquals('success', $result['status']);
+
+        $this->assertEquals('success', $result['status']);
         $this->assertArrayHasKey('count', $result['data']);
         $this->assertArrayHasKey('dataSet', $result['data']);
     }
@@ -59,24 +59,24 @@ class RestfulTest extends TestCase
     {
         $response = self::$client->get('/api/categories');
         $result = json_decode($response->getBody(), true);
-        echo $response->getBody();
-        //$this->assertEquals('success', $result['status']);
+
+        $this->assertEquals('success', $result['status']);
     }
 
     public function testTags()
     {
         $response = self::$client->get('/api/tags');
         $result = json_decode($response->getBody(), true);
-        echo $response->getBody();
-        //$this->assertEquals('success', $result['status']);
+
+        $this->assertEquals('success', $result['status']);
     }
 
     public function testPost()
     {
         $response = self::$client->get('/api/post', array('query' => array('cid' => 1)));
         $result = json_decode($response->getBody(), true);
-        echo $response->getBody();
-        //$this->assertEquals('success', $result['status']);
+
+        $this->assertEquals('success', $result['status']);
         $this->assertTrue(is_array($result['data']));
     }
 
